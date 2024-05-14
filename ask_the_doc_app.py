@@ -12,14 +12,32 @@ from langchain.chains import RetrievalQA
 from langchain_community.embeddings import HuggingFaceHubEmbeddings
 
 import streamlit as st
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 
 st.title("🦜🔗 Ask The Doc App")
 
+# set the Hugging Face API token in the .env file
 HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 
-def generate_response(uploaded_file, query_text):
+def generate_response(
+    uploaded_file: UploadedFile,
+    query_text: str,
+) -> str:
+    """
+    This function generates a response to a query using the uploaded document and the query text.
+
+    It first loads the document and splits it into chunks. Then, it selects the embeddings and creates a vectorstore from the documents.
+    Next, it creates a retriever interface and a QA chain. Finally, it runs the QA chain on the query text.
+
+    Args:
+        - uploaded_file: The uploaded document.
+        - query_text: The query text.
+
+    Returns:
+        - The response to the query.
+    """
     # Load document if file is uploaded
     if uploaded_file is not None:
         documents = [uploaded_file.read().decode()]

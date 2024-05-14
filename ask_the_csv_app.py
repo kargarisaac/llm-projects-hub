@@ -5,6 +5,8 @@ load_dotenv()  # take environment variables from .env.
 import os
 
 import streamlit as st
+from streamlit.runtime.uploaded_file_manager import UploadedFile
+
 import pandas as pd
 from langchain.chat_models import ChatOpenAI
 from langchain_experimental.agents import create_pandas_dataframe_agent
@@ -18,7 +20,16 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 
 # Load CSV file
-def load_csv(input_csv):
+def load_csv(input_csv: UploadedFile) -> pd.DataFrame:
+    """
+    This function loads a CSV file and displays it in a Streamlit expander.
+
+    Args:
+        - input_csv: The uploaded CSV file.
+
+    Returns:
+        - The DataFrame created from the CSV file.
+    """
     df = pd.read_csv(input_csv)
     with st.expander("See DataFrame"):
         st.write(df)
@@ -26,7 +37,19 @@ def load_csv(input_csv):
 
 
 # Generate LLM response
-def generate_response(csv_file, input_query):
+def generate_response(csv_file: UploadedFile, input_query: str) -> st.success:
+    """
+    This function generates a response to a query using the uploaded CSV file and the query text.
+
+    It first loads the CSV file and creates a Pandas DataFrame Agent. Then, it performs a query using the Agent.
+
+    Args:
+        - csv_file: The uploaded CSV file.
+        - input_query: The query text.
+
+    Returns:
+        - The response to the query.
+    """
     llm = ChatOpenAI(
         model_name="gpt-3.5-turbo-0613", temperature=0.2, openai_api_key=openai_api_key
     )
