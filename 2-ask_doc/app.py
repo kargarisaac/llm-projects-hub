@@ -1,35 +1,25 @@
 from dotenv import load_dotenv
-
-load_dotenv()  # take environment variables from .env.
-
 import os
-
 from langchain_community.llms import HuggingFaceEndpoint
-from langchain.docstore.document import Document
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.chains import RetrievalQA
 from langchain_community.embeddings import HuggingFaceHubEmbeddings
-
 import streamlit as st
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
+# Load environment variables from .env file
+load_dotenv()
+
+# Set the Hugging Face API token from the environment variables
+HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 st.title("🦜🔗 Ask The Doc App")
 
-# set the Hugging Face API token in the .env file
-HUGGINGFACEHUB_API_TOKEN = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
-
-def generate_response(
-    uploaded_file: UploadedFile,
-    query_text: str,
-) -> str:
+def generate_response(uploaded_file: UploadedFile, query_text: str) -> str:
     """
-    This function generates a response to a query using the uploaded document and the query text.
-
-    It first loads the document and splits it into chunks. Then, it selects the embeddings and creates a vectorstore from the documents.
-    Next, it creates a retriever interface and a QA chain. Finally, it runs the QA chain on the query text.
+    Generates a response to a query using the uploaded document and the query text.
 
     Args:
         - uploaded_file: The uploaded document.
@@ -41,19 +31,24 @@ def generate_response(
     # Load document if file is uploaded
     if uploaded_file is not None:
         documents = [uploaded_file.read().decode()]
+
         # Split documents into chunks
         text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
         texts = text_splitter.create_documents(documents)
+
         # Select embeddings
         embeddings = HuggingFaceHubEmbeddings(
             model="sentence-transformers/all-mpnet-base-v2",
             task="feature-extraction",
             huggingfacehub_api_token=HUGGINGFACEHUB_API_TOKEN,
         )
+
         # Create a vectorstore from documents
         db = Chroma.from_documents(texts, embeddings)
+
         # Create retriever interface
         retriever = db.as_retriever()
+
         # Create QA chain
         llm = HuggingFaceEndpoint(
             repo_id="mistralai/Mistral-7B-Instruct-v0.2",
@@ -61,25 +56,32 @@ def generate_response(
             temperature=0.5,
             token=HUGGINGFACEHUB_API_TOKEN,
         )
+
         qa = RetrievalQA.from_chain_type(
             llm=llm,
             chain_type="stuff",
             retriever=retriever,
         )
+
         return qa.run(query_text)
+    return "No file uploaded."
 
 
-if __name__ == "__main__":
+def main():
+    """
+    Main function to run the Streamlit UI.
+    """
     # File upload
-    uploaded_file = st.file_uploader("Upload an article", type="txt")
-    # Query text
+    uploaded_file = st.file_uploader("Upload an article in txt format", type="txt")
+
+    # Query text input
     query_text = st.text_input(
         "Enter your question:",
         placeholder="Please provide a short summary.",
         disabled=not uploaded_file,
     )
 
-    # Form input and query
+    # Form for input and query submission
     result = []
     with st.form("myform", clear_on_submit=True):
         submitted = st.form_submit_button(
@@ -90,5 +92,10 @@ if __name__ == "__main__":
                 response = generate_response(uploaded_file, query_text)
                 result.append(response)
 
+    # Display result
     if len(result):
-        st.info(response)
+        st.info(result[0])
+
+
+if __name__ == "__main__":
+    main()
